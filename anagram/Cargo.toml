@@ -1,0 +1,7 @@
+[dependencies]
+unicode-segmentation = "1.7.1"
+
+[package]
+edition = "2018"
+name = "anagram"
+version = "0.0.0"
