@@ -88,7 +88,7 @@ enum CardVal {
     Num(i32),
     Court(Face),
 }
-//This is not quite correct, as not all integers are valid card values
+
 impl std::str::FromStr for CardVal {
     type Err = String;
 
@@ -96,7 +96,7 @@ impl std::str::FromStr for CardVal {
         match Face::from_str(s) {
             Ok(face) => Ok(Court(face)),
             _ => match i32::from_str(s) {
-                Ok(i) => Ok(CardVal::Num(i)),
+                Ok(i) if (1..11).contains(&i) => Ok(CardVal::Num(i)),
                 _ => Err(format!("'{}' is not a valid value for CardVal", s)),
             },
         }
@@ -244,7 +244,7 @@ fn values_multiples(hand: &Hand, multiples: usize) -> Vec<i32> {
         .into_iter()
         .filter(|(_key, val)| *val == multiples)
         .map(|x| x.0)
-        .sorted()
+        .sorted_unstable()
         .rev()
         .collect();
     cardval_vec
@@ -255,13 +255,13 @@ fn sorted_cards_straight(hand: &Hand) -> Vec<i32> {
     let sorted_values: Vec<i32> = hashset
         .iter()
         .map(|card| card_value(card))
-        .sorted()
+        .sorted_unstable()
         .rev()
         .collect();
     let sorted_values_low_a: Vec<i32> = hashset
         .iter()
         .map(|card| card_value_low_a(card))
-        .sorted()
+        .sorted_unstable()
         .rev()
         .collect();
     if sorted_values.contains(&2) {
