@@ -1,0 +1,2 @@
+[target.<current-target-triple>]
+runner = ".cargo/codelldb.sh"

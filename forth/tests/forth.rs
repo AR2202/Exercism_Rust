@@ -1,10 +1,113 @@
-use forth::{Error, Forth, Value};
+use forth::is_valid_def;
+use forth::{Error, Expression, Forth, Operator, Value};
 
 #[test]
 fn no_input_no_stack() {
     assert_eq!(Vec::<Value>::new(), Forth::new().stack());
 }
 
+#[test]
+fn test_split() {
+    assert_eq!("a:b".split(":").collect::<Vec<&str>>(), vec!["a", "b"])
+}
+
+#[test]
+fn test_split2() {
+    assert_eq!("a::b".split(":").collect::<Vec<&str>>(), vec!["a", "", "b"])
+}
+
+#[test]
+fn test_split3() {
+    assert_eq!(":a:b".split(":").collect::<Vec<&str>>(), vec!["", "a", "b"])
+}
+#[test]
+fn test_split4() {
+    assert_eq!(
+        "1 2 + : addone 1 + ; addone"
+            .split(":")
+            .map(|substr| substr.split(";").collect::<Vec<&str>>())
+            .collect::<Vec<Vec<&str>>>()
+            .concat(),
+        vec!["1 2 + ", " addone 1 + ", " addone"]
+    )
+}
+#[test]
+fn test_split5() {
+    assert_eq!(
+        ": addone 1 + ;"
+            .split(":")
+            .map(|substr| substr.split(";").collect::<Vec<&str>>())
+            .collect::<Vec<Vec<&str>>>()
+            .concat(),
+        vec!["", " addone 1 + ", ""]
+    )
+}
+#[test]
+fn test_split7() {
+    assert_eq!(
+        ": addone 1 + ;"
+            .split(":")
+            .map(|substr| substr.split(";").collect::<Vec<&str>>())
+            .collect::<Vec<Vec<&str>>>()
+            .concat()
+            .iter()
+            .filter(|&s| !s.is_empty())
+            .map(|s| *s)
+            .collect::<Vec<&str>>(),
+        vec![" addone 1 + "]
+    )
+}
+#[test]
+fn test_split6() {
+    assert_eq!("ab".split(";").collect::<Vec<&str>>(), vec!["ab"])
+}
+
+#[test]
+fn test_to_lowercase() {
+    assert_eq!("/", "/".to_lowercase())
+}
+#[test]
+fn test_is_valid_def() {
+    assert!(is_valid_def(": a b ; : c d ;"))
+}
+#[test]
+fn test_is_valid_def2() {
+    assert!(is_valid_def(" 1 : a b ; : c d ;"))
+}
+
+#[test]
+fn test_no_def_is_valid() {
+    assert!(is_valid_def(" 1 + 2"))
+}
+#[test]
+fn test_is_invalid_def() {
+    assert!(!is_valid_def(": a b "))
+}
+#[test]
+fn test_is_invalid_def2() {
+    assert!(!is_valid_def(":"))
+}
+#[test]
+fn test_parse_num() {
+    let f = Forth::new();
+    let parsed = f.parse_expr("2");
+    assert_eq!(Ok(vec![Expression::Val(2)]), parsed)
+}
+#[test]
+fn test_parse_add() {
+    let f = Forth::new();
+    let parsed = f.parse_expr("+");
+    assert_eq!(Ok(vec![Expression::Arith(Operator::Add)]), parsed)
+}
+
+#[test]
+fn test_add() {
+    let mut f = Forth::new();
+    f.eval("1 2 ");
+    let st = f.stack();
+    f.eval("+");
+    assert_eq!(vec![3], f.stack())
+}
 #[test]
 #[ignore]
 fn numbers_just_get_pushed_onto_the_stack() {
