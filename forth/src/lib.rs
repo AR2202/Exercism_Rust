@@ -41,7 +41,11 @@ pub enum Expression {
     Manip(Word),
     Def(Definition),
 }
-
+impl Default for Forth {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl Forth {
     pub fn new() -> Forth {
         let initial_defs: Dict = HashMap::from([
@@ -59,7 +63,7 @@ impl Forth {
 
     pub fn stack(&self) -> &[Value] {
         let Forth(stack, _) = self;
-        &stack
+        stack
     }
 
     pub fn eval(&mut self, input: &str) -> Result {
@@ -78,16 +82,15 @@ impl Forth {
                         .filter(|&s| !s.is_empty())
                         .map(|word| self.parse_expr(word))
                         .collect();
-                    let exps = match maybe_vec {
+                    match maybe_vec {
                         Err(e) => Err(e),
                         Ok(v) => v_acc.map(|vacc| [vacc, v.concat()].concat()),
                         //why does vacc.extend(v.concat()) not work?
-                    };
-                    exps
+                    }
                 } else {
                     let parseresult = self.parse_def(s);
                     match parseresult {
-                        Err(e) => return Err(e),
+                        Err(e) => Err(e),
                         _ => v_acc,
                     }
                 }
@@ -125,7 +128,7 @@ impl Forth {
         let new_word = match words.next() {
             None => return Err(Error::InvalidWord),
             Some(word) => {
-                if let Ok(i) = word.parse::<i32>() {
+                if let Ok(_i) = word.parse::<i32>() {
                     return Err(Error::InvalidWord);
                 } else {
                     word.to_string()
@@ -140,7 +143,7 @@ impl Forth {
         };
         let Forth(_, dict) = self;
         dict.insert(new_word.to_lowercase(), unwrapped_defs);
-        return Ok(());
+        Ok(())
     }
 
     fn eval_expr(&mut self, expr: &Expression) -> Result {
@@ -153,14 +156,14 @@ impl Forth {
                 let a = stack.pop();
                 if let (Some(a), Some(b)) = (a, b) {
                     match op {
-                        Operator::Add => stack.push((a + b)),
-                        Operator::Mult => stack.push((a * b)),
-                        Operator::Sub => stack.push((a - b)),
+                        Operator::Add => stack.push(a + b),
+                        Operator::Mult => stack.push(a * b),
+                        Operator::Sub => stack.push(a - b),
                         Operator::Div => {
                             if b == 0 {
                                 return Err(Error::DivisionByZero);
                             } else {
-                                stack.push((a / b));
+                                stack.push(a / b);
                             }
                         }
                     }
@@ -175,9 +178,8 @@ impl Forth {
                     match word {
                         Word::Drop => return Ok(()),
                         Word::Dup => {
-                            let a_copy = a.clone();
                             stack.push(a);
-                            stack.push(a_copy)
+                            stack.push(a)
                         }
                         Word::Swap => {
                             let b = stack.pop();
@@ -192,10 +194,9 @@ impl Forth {
                             let b = stack.pop();
 
                             if let Some(b) = b {
-                                let b_copy = b.clone();
                                 stack.push(b);
                                 stack.push(a);
-                                stack.push(b_copy);
+                                stack.push(b);
                             } else {
                                 return Err(Error::StackUnderflow);
                             }
@@ -206,7 +207,7 @@ impl Forth {
                 }
             }
         }
-        return Ok(());
+        Ok(())
     }
 }
 pub fn split_on_def(input: &str) -> Vec<&str> {
@@ -217,7 +218,7 @@ pub fn split_on_def(input: &str) -> Vec<&str> {
         .concat()
 }
 pub fn is_valid_def(input: &str) -> bool {
-    let mut defs = input.split(":");
+    let mut defs = input.split(':');
     defs.next();
-    defs.all(|s| s.contains(";"))
+    defs.all(|s| s.contains(';'))
 }
