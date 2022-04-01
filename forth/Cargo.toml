@@ -2,3 +2,5 @@
 edition = "2021"
 name = "forth"
 version = "1.7.0"
+[dependencies]
+intmap = "0.7.1"

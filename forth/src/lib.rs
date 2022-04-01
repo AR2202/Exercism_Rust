@@ -1,14 +1,16 @@
+use intmap::IntMap;
 use std::collections::HashMap;
 pub type Value = i32;
 pub type Result = std::result::Result<(), Error>;
-pub type Dict = HashMap<String, Vec<Expression>>;
+pub type Names = HashMap<String, u64>;
+type Dict = IntMap<Vec<Expression>>;
 type Stack = Vec<Value>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Definition(String, String);
 
 #[derive(Debug, PartialEq)]
-pub struct Forth(Stack, Dict);
+pub struct Forth(Stack, Dict, Names);
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -48,21 +50,34 @@ impl Default for Forth {
 }
 impl Forth {
     pub fn new() -> Forth {
-        let initial_defs: Dict = HashMap::from([
-            (String::from("dup"), vec![Expression::Manip(Word::Dup)]),
-            (String::from("drop"), vec![Expression::Manip(Word::Drop)]),
-            (String::from("swap"), vec![Expression::Manip(Word::Swap)]),
-            (String::from("over"), vec![Expression::Manip(Word::Over)]),
-            (String::from("+"), vec![Expression::Arith(Operator::Add)]),
-            (String::from("-"), vec![Expression::Arith(Operator::Sub)]),
-            (String::from("*"), vec![Expression::Arith(Operator::Mult)]),
-            (String::from("/"), vec![Expression::Arith(Operator::Div)]),
+        let initial_names: Names = HashMap::from([
+            (String::from("dup"), 1),
+            (String::from("drop"), 2),
+            (String::from("swap"), 3),
+            (String::from("over"), 4),
+            (String::from("+"), 5),
+            (String::from("-"), 6),
+            (String::from("*"), 7),
+            (String::from("/"), 8),
         ]);
-        Forth(Vec::new(), initial_defs)
+        let initial_defs: Dict = IntMap::from_iter(
+            [
+                (1, vec![Expression::Manip(Word::Dup)]),
+                (2, vec![Expression::Manip(Word::Drop)]),
+                (3, vec![Expression::Manip(Word::Swap)]),
+                (4, vec![Expression::Manip(Word::Over)]),
+                (5, vec![Expression::Arith(Operator::Add)]),
+                (6, vec![Expression::Arith(Operator::Sub)]),
+                (7, vec![Expression::Arith(Operator::Mult)]),
+                (8, vec![Expression::Arith(Operator::Div)]),
+            ]
+            .into_iter(),
+        );
+        Forth(Vec::new(), initial_defs, initial_names)
     }
 
     pub fn stack(&self) -> &[Value] {
-        let Forth(stack, _) = self;
+        let Forth(stack, _, _) = self;
         stack
     }
 
@@ -110,14 +125,17 @@ impl Forth {
     }
 
     pub fn parse_expr(&self, input: &str) -> std::result::Result<Vec<Expression>, Error> {
-        let Forth(_, dict) = self;
+        let Forth(_, dict, names) = self;
 
         if let Ok(i) = input.parse::<i32>() {
             Ok(vec![Expression::Val(i)])
         } else {
-            let lookup = match dict.get(&input.to_lowercase()) {
+            let lookup = match names.get(&input.to_lowercase()) {
                 None => return Err(Error::UnknownWord),
-                Some(expr) => expr,
+                Some(&address) => match dict.get(address) {
+                    None => return Err(Error::UnknownWord),
+                    Some(expr) => expr,
+                },
             };
             Ok(lookup.clone())
         }
@@ -141,13 +159,15 @@ impl Forth {
             Err(e) => return Err(e),
             Ok(def) => def.into_iter().flatten().collect::<Vec<Expression>>(),
         };
-        let Forth(_, dict) = self;
-        dict.insert(new_word.to_lowercase(), unwrapped_defs);
+        let Forth(_, dict, names) = self;
+        let nextaddress = (names.len() + 1) as u64;
+        names.insert(new_word.to_lowercase(), nextaddress);
+        dict.insert(nextaddress, unwrapped_defs);
         Ok(())
     }
 
     fn eval_expr(&mut self, expr: &Expression) -> Result {
-        let Forth(stack, _) = self;
+        let Forth(stack, _, _) = self;
         match expr {
             Expression::Val(a) => stack.push(*a),
             Expression::Def(_) => return Ok(()),
