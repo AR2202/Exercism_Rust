@@ -42,7 +42,10 @@ pub enum Expression {
     Arith(Operator),
     Manip(Word),
     Def(Definition),
+    Address(u64),
+    Func(Vec<Expression>),
 }
+
 impl Default for Forth {
     fn default() -> Self {
         Self::new()
@@ -134,6 +137,7 @@ impl Forth {
                 None => return Err(Error::UnknownWord),
                 Some(&address) => match dict.get(address) {
                     None => return Err(Error::UnknownWord),
+
                     Some(expr) => expr,
                 },
             };
@@ -171,6 +175,9 @@ impl Forth {
         match expr {
             Expression::Val(a) => stack.push(*a),
             Expression::Def(_) => return Ok(()),
+            Expression::Address(_) => return Ok(()),
+            Expression::Func(_) => return Ok(()),
+
             Expression::Arith(op) => {
                 let b = stack.pop();
                 let a = stack.pop();
