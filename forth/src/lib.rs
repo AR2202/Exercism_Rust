@@ -3,7 +3,7 @@ use std::collections::HashMap;
 pub type Value = i32;
 pub type Result = std::result::Result<(), Error>;
 pub type Names = HashMap<String, u64>;
-type Dict = IntMap<Vec<Expression>>;
+type Dict = IntMap<Expression>;
 type Stack = Vec<Value>;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -65,14 +65,14 @@ impl Forth {
         ]);
         let initial_defs: Dict = IntMap::from_iter(
             [
-                (1, vec![Expression::Manip(Word::Dup)]),
-                (2, vec![Expression::Manip(Word::Drop)]),
-                (3, vec![Expression::Manip(Word::Swap)]),
-                (4, vec![Expression::Manip(Word::Over)]),
-                (5, vec![Expression::Arith(Operator::Add)]),
-                (6, vec![Expression::Arith(Operator::Sub)]),
-                (7, vec![Expression::Arith(Operator::Mult)]),
-                (8, vec![Expression::Arith(Operator::Div)]),
+                (1, Expression::Manip(Word::Dup)),
+                (2, Expression::Manip(Word::Drop)),
+                (3, Expression::Manip(Word::Swap)),
+                (4, Expression::Manip(Word::Over)),
+                (5, Expression::Arith(Operator::Add)),
+                (6, Expression::Arith(Operator::Sub)),
+                (7, Expression::Arith(Operator::Mult)),
+                (8, Expression::Arith(Operator::Div)),
             ]
             .into_iter(),
         );
@@ -127,18 +127,18 @@ impl Forth {
         Ok(())
     }
 
-    pub fn parse_expr(&self, input: &str) -> std::result::Result<Vec<Expression>, Error> {
+    pub fn parse_expr(&self, input: &str) -> std::result::Result<Expression, Error> {
         let Forth(_, dict, names) = self;
 
         if let Ok(i) = input.parse::<i32>() {
-            Ok(vec![Expression::Val(i)])
+            Ok(Expression::Val(i))
         } else {
             let lookup = match names.get(&input.to_lowercase()) {
                 None => return Err(Error::UnknownWord),
                 Some(&address) => match dict.get(address) {
                     None => return Err(Error::UnknownWord),
 
-                    Some(expr) => expr,
+                    Some(expr) => Expression::Address(address),
                 },
             };
             Ok(lookup.clone())
@@ -157,25 +157,37 @@ impl Forth {
                 }
             }
         };
-        let defs: std::result::Result<Vec<Vec<Expression>>, Error> =
+        /*let defs: std::result::Result<Vec<Vec<Expression>>, Error> =
             words.map(|word| self.parse_expr(word)).collect();
         let unwrapped_defs = match defs {
             Err(e) => return Err(e),
             Ok(def) => def.into_iter().flatten().collect::<Vec<Expression>>(),
+        };*/
+        let defs: std::result::Result<Vec<Expression>, Error> =
+            words.map(|word| self.parse_expr(word)).collect();
+        let unwrapped_defs = match defs {
+            Err(e) => return Err(e),
+            Ok(def) => def,
         };
         let Forth(_, dict, names) = self;
         let nextaddress = (names.len() + 1) as u64;
         names.insert(new_word.to_lowercase(), nextaddress);
-        dict.insert(nextaddress, unwrapped_defs);
+        dict.insert(nextaddress, Expression::Func(unwrapped_defs));
         Ok(())
     }
 
     fn eval_expr(&mut self, expr: &Expression) -> Result {
-        let Forth(stack, _, _) = self;
+        let Forth(stack, dict, _) = self;
         match expr {
             Expression::Val(a) => stack.push(*a),
             Expression::Def(_) => return Ok(()),
-            Expression::Address(_) => return Ok(()),
+            Expression::Address(address) => match dict.get(*address) {
+                None => return Err(Error::UnknownWord),
+
+                Some(new_expr) => {
+                    self.eval_expr(new_expr);
+                }
+            },
             Expression::Func(_) => return Ok(()),
 
             Expression::Arith(op) => {
