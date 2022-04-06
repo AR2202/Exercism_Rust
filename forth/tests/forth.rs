@@ -91,13 +91,7 @@ fn test_is_invalid_def2() {
 fn test_parse_num() {
     let f = Forth::new();
     let parsed = f.parse_expr("2");
-    assert_eq!(Ok(vec![Expression::Val(2)]), parsed)
-}
-#[test]
-fn test_parse_add() {
-    let f = Forth::new();
-    let parsed = f.parse_expr("+");
-    assert_eq!(Ok(vec![Expression::Arith(Operator::Add)]), parsed)
+    assert_eq!(Ok(Expression::Val(2)), parsed)
 }
 
 #[test]

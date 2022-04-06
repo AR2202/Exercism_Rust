@@ -96,14 +96,13 @@ impl Forth {
             .fold(Ok(Vec::new()), |v_acc, (i, s)| {
                 if i % 2 == 0 {
                     let words = s.split_whitespace();
-                    let maybe_vec: std::result::Result<Vec<Vec<Expression>>, Error> = words
+                    let maybe_vec: std::result::Result<Vec<Expression>, Error> = words
                         .filter(|&s| !s.is_empty())
                         .map(|word| self.parse_expr(word))
                         .collect();
                     match maybe_vec {
                         Err(e) => Err(e),
-                        Ok(v) => v_acc.map(|vacc| [vacc, v.concat()].concat()),
-                        //why does vacc.extend(v.concat()) not work?
+                        Ok(v) => v_acc.map(|vacc| [vacc, v].concat()),
                     }
                 } else {
                     let parseresult = self.parse_def(s);
@@ -138,10 +137,10 @@ impl Forth {
                 Some(&address) => match dict.get(address) {
                     None => return Err(Error::UnknownWord),
 
-                    Some(expr) => Expression::Address(address),
+                    Some(_expr) => Expression::Address(address),
                 },
             };
-            Ok(lookup.clone())
+            Ok(lookup)
         }
     }
 
@@ -157,12 +156,7 @@ impl Forth {
                 }
             }
         };
-        /*let defs: std::result::Result<Vec<Vec<Expression>>, Error> =
-            words.map(|word| self.parse_expr(word)).collect();
-        let unwrapped_defs = match defs {
-            Err(e) => return Err(e),
-            Ok(def) => def.into_iter().flatten().collect::<Vec<Expression>>(),
-        };*/
+
         let defs: std::result::Result<Vec<Expression>, Error> =
             words.map(|word| self.parse_expr(word)).collect();
         let unwrapped_defs = match defs {
@@ -178,17 +172,16 @@ impl Forth {
 
     fn eval_expr(&mut self, expr: &Expression) -> Result {
         let Forth(stack, dict, _) = self;
+        let cloned_dict = dict.clone();
         match expr {
             Expression::Val(a) => stack.push(*a),
             Expression::Def(_) => return Ok(()),
-            Expression::Address(address) => match dict.get(*address) {
+            Expression::Address(address) => match cloned_dict.get(*address) {
                 None => return Err(Error::UnknownWord),
 
-                Some(new_expr) => {
-                    self.eval_expr(new_expr);
-                }
+                Some(new_expr) => return self.eval_expr(new_expr),
             },
-            Expression::Func(_) => return Ok(()),
+            Expression::Func(v) => return v.iter().try_for_each(|e| self.eval_expr(e)),
 
             Expression::Arith(op) => {
                 let b = stack.pop();
