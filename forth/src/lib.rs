@@ -1,13 +1,10 @@
-use intmap::IntMap;
 use std::collections::HashMap;
 pub type Value = i32;
 pub type Result = std::result::Result<(), Error>;
-pub type Names = HashMap<String, u64>;
-type Dict = IntMap<Expression>;
-type Stack = Vec<Value>;
+pub type Names = HashMap<String, usize>;
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Definition(String, String);
+type Dict = Vec<Expression>;
+type Stack = Vec<Value>;
 
 #[derive(Debug, PartialEq)]
 pub struct Forth(Stack, Dict, Names);
@@ -41,8 +38,7 @@ pub enum Expression {
     Val(Value),
     Arith(Operator),
     Manip(Word),
-    Def(Definition),
-    Address(u64),
+    Address(usize),
     Func(Vec<Expression>),
 }
 
@@ -54,28 +50,26 @@ impl Default for Forth {
 impl Forth {
     pub fn new() -> Forth {
         let initial_names: Names = HashMap::from([
-            (String::from("dup"), 1),
-            (String::from("drop"), 2),
-            (String::from("swap"), 3),
-            (String::from("over"), 4),
-            (String::from("+"), 5),
-            (String::from("-"), 6),
-            (String::from("*"), 7),
-            (String::from("/"), 8),
+            (String::from("dup"), 0),
+            (String::from("drop"), 1),
+            (String::from("swap"), 2),
+            (String::from("over"), 3),
+            (String::from("+"), 4),
+            (String::from("-"), 5),
+            (String::from("*"), 6),
+            (String::from("/"), 7),
         ]);
-        let initial_defs: Dict = IntMap::from_iter(
-            [
-                (1, Expression::Manip(Word::Dup)),
-                (2, Expression::Manip(Word::Drop)),
-                (3, Expression::Manip(Word::Swap)),
-                (4, Expression::Manip(Word::Over)),
-                (5, Expression::Arith(Operator::Add)),
-                (6, Expression::Arith(Operator::Sub)),
-                (7, Expression::Arith(Operator::Mult)),
-                (8, Expression::Arith(Operator::Div)),
-            ]
-            .into_iter(),
-        );
+
+        let initial_defs: Dict = vec![
+            Expression::Manip(Word::Dup),
+            Expression::Manip(Word::Drop),
+            Expression::Manip(Word::Swap),
+            Expression::Manip(Word::Over),
+            Expression::Arith(Operator::Add),
+            Expression::Arith(Operator::Sub),
+            Expression::Arith(Operator::Mult),
+            Expression::Arith(Operator::Div),
+        ];
         Forth(Vec::new(), initial_defs, initial_names)
     }
 
@@ -164,9 +158,9 @@ impl Forth {
             Ok(def) => def,
         };
         let Forth(_, dict, names) = self;
-        let nextaddress = (names.len() + 1) as u64;
+        let nextaddress = names.len();
         names.insert(new_word.to_lowercase(), nextaddress);
-        dict.insert(nextaddress, Expression::Func(unwrapped_defs));
+        dict.push(Expression::Func(unwrapped_defs));
         Ok(())
     }
 
@@ -175,7 +169,7 @@ impl Forth {
         let cloned_dict = dict.clone();
         match expr {
             Expression::Val(a) => stack.push(*a),
-            Expression::Def(_) => return Ok(()),
+
             Expression::Address(address) => match cloned_dict.get(*address) {
                 None => return Err(Error::UnknownWord),
 

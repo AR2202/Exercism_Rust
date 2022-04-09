@@ -1,5 +1,5 @@
 use forth::is_valid_def;
-use forth::{Error, Expression, Forth, Operator, Value};
+use forth::{Error, Expression, Forth, Value};
 
 #[test]
 fn no_input_no_stack() {
@@ -98,7 +98,6 @@ fn test_parse_num() {
 fn test_add() {
     let mut f = Forth::new();
     f.eval("1 2 ");
-    let st = f.stack();
     f.eval("+");
     assert_eq!(vec![3], f.stack())
 }
