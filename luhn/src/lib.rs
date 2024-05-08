@@ -1,11 +1,10 @@
 /// Check a Luhn checksum.
 
 pub fn is_valid(code: &str) -> bool {
-    code.chars().filter(|&c| c != ' ').count() > 1
-        && code.chars().filter(|&c| c != ' ').all(|c| c.is_digit(10))
-        && code
-            .chars()
-            .filter(|&c| c != ' ')
+    let iter = code.chars().filter(|&c| c != ' ');
+    iter.clone().count() > 1
+        && iter.clone().all(|c| c.is_digit(10))
+        && iter
             .rev()
             .enumerate()
             .fold(0, |acc, (i, c)| match (i, c.to_digit(10).unwrap()) {
